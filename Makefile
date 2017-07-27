@@ -13,14 +13,16 @@ else
 	scriptbindir ?= $(prefix)/bin
 endif
 datadir ?= $(scriptbindir)
+datarootdir ?= $(prefix)/share
 
 bindir ?= $(exec_prefix)/bin
 libdir ?= $(exec_prefix)/lib
 sbindir ?= $(exec_prefix)/sbin
 
 sysconfdir ?= $(prefix)/etc
-infodir ?= $(prefix)/info
-mandir ?= $(prefix)/man
+docdir ?= $(datarootdir)/doc/$(PROJ)
+infodir ?= $(datarootdir)/info
+mandir ?= $(datarootdir)/man
 localstatedir ?= /var/local
 
 CHECK_SCRIPT_SH = /bin/sh -n
@@ -37,9 +39,10 @@ INSTALL_DIR = /usr/bin/install -d -m 755
 
 # Macro Defines
 PROJ = fil_tools_pl
-VER = 1.0.0
+VER = 1.0.1
+TAG = v$(VER)
 
-PKG_SORT_KEY ?= 6,6
+TAR_SORT_KEY ?= 6,6
 
 SUBDIRS-TEST-SCRIPTS-SH = \
 				tests/01_fil \
@@ -73,6 +76,10 @@ SCRIPTS = \
 
 DATA = \
 
+DOC = \
+				LICENSE \
+				README.md \
+
 DIRS = \
 				$(localstatedir)/lib/fil_tools/info/ \
 
@@ -92,14 +99,6 @@ all: \
 				$(SCRIPTS) \
 				$(DATA) \
 				$(DIRS) \
-
-# Executables
-
-# Source Objects
-
-# Clean Up Everything
-clean:
-	rm -f *.$(o) $(PROGRAMS)
 
 # Check
 check: check-SCRIPTS-SH check-SCRIPTS-PL
@@ -123,28 +122,42 @@ test:
 	$(MAKE) test-recursive
 
 # Install
-install: install-SCRIPTS install-DATA install-DIRS
+install: install-SCRIPTS install-DATA install-DOC install-DIRS
 
 install-SCRIPTS:
 	@list='$(SCRIPTS)'; \
-	if [ ! -d "$(DESTDIR)$(scriptbindir)/" ]; then \
-		echo " mkdir -p $(DESTDIR)$(scriptbindir)/"; \
-		mkdir -p $(DESTDIR)$(scriptbindir)/; \
-	fi;\
 	for i in $$list; do \
-		echo " $(INSTALL_SCRIPT) $$i $(DESTDIR)$(scriptbindir)/"; \
-		$(INSTALL_SCRIPT) $$i $(DESTDIR)$(scriptbindir)/; \
+		dir="`dirname \"$(DESTDIR)$(scriptbindir)/$$i\"`"; \
+		if [ ! -d "$$dir/" ]; then \
+			echo " mkdir -p $$dir/"; \
+			mkdir -p $$dir/; \
+		fi;\
+		echo " $(INSTALL_SCRIPT) $$i $(DESTDIR)$(scriptbindir)/$$i"; \
+		$(INSTALL_SCRIPT) $$i $(DESTDIR)$(scriptbindir)/$$i; \
 	done
 
 install-DATA:
 	@list='$(DATA)'; \
-	if [ ! -d "$(DESTDIR)$(datadir)/" ]; then \
-		echo " mkdir -p $(DESTDIR)$(datadir)/"; \
-		mkdir -p $(DESTDIR)$(datadir)/; \
-	fi;\
 	for i in $$list; do \
-		echo " $(INSTALL_DATA) $$i $(DESTDIR)$(datadir)/"; \
-		$(INSTALL_DATA) $$i $(DESTDIR)$(datadir)/; \
+		dir="`dirname \"$(DESTDIR)$(datadir)/$$i\"`"; \
+		if [ ! -d "$$dir/" ]; then \
+			echo " mkdir -p $$dir/"; \
+			mkdir -p $$dir/; \
+		fi;\
+		echo " $(INSTALL_DATA) $$i $(DESTDIR)$(datadir)/$$i"; \
+		$(INSTALL_DATA) $$i $(DESTDIR)$(datadir)/$$i; \
+	done
+
+install-DOC:
+	@list='$(DOC)'; \
+	for i in $$list; do \
+		dir="`dirname \"$(DESTDIR)$(docdir)/$$i\"`"; \
+		if [ ! -d "$$dir/" ]; then \
+			echo " mkdir -p $$dir/"; \
+			mkdir -p $$dir/; \
+		fi;\
+		echo " $(INSTALL_DATA) $$i $(DESTDIR)$(docdir)/$$i"; \
+		$(INSTALL_DATA) $$i $(DESTDIR)$(docdir)/$$i; \
 	done
 
 install-DIRS:
@@ -158,6 +171,12 @@ install-DIRS:
 pkg:
 	@$(MAKE) DESTDIR=$(CURDIR)/$(PROJ)-$(VER).$(ENVTYPE) install; \
 	tar cvf ./$(PROJ)-$(VER).$(ENVTYPE).tar ./$(PROJ)-$(VER).$(ENVTYPE) > /dev/null; \
-	tar tvf ./$(PROJ)-$(VER).$(ENVTYPE).tar 2>&1 | sort -k $(PKG_SORT_KEY) | tee ./$(PROJ)-$(VER).$(ENVTYPE).tar.list.txt; \
+	tar tvf ./$(PROJ)-$(VER).$(ENVTYPE).tar 2>&1 | sort -k $(TAR_SORT_KEY) | tee ./$(PROJ)-$(VER).$(ENVTYPE).tar.list.txt; \
 	gzip -f ./$(PROJ)-$(VER).$(ENVTYPE).tar; \
 	rm -fr ./$(PROJ)-$(VER).$(ENVTYPE)
+
+# Dist
+dist:
+	@git archive --format=tar --prefix=$(PROJ)-$(VER)/ $(TAG) > ../$(PROJ)-$(VER).tar; \
+	tar tvf ../$(PROJ)-$(VER).tar 2>&1 | sort -k $(TAR_SORT_KEY) | tee ../$(PROJ)-$(VER).tar.list.txt; \
+	gzip -f ../$(PROJ)-$(VER).tar
